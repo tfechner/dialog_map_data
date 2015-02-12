@@ -1,0 +1,40 @@
+.dot circle {
+  fill: lightsteelblue;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.dot circle.dragging {
+  fill: red;
+  stroke: brown;
+}
+
+.axis line {
+  fill: none;
+  stroke: #ddd;
+  shape-rendering: crispEdges;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart text {
+  fill: black;
+  font: 10px sans-serif;
+  text-anchor: start;
+}
+
+
+#tooltip {
+    font-family: sans-serif;
+    position: top;
+    width: auto;
+    height: 200;
+    padding: 10px;
+    line-height: 1;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border-radius: 2px;
+    pointer-events: none;
+}
+#tooltip.hidden {
+    display: none;
+}
