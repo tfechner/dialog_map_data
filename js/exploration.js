@@ -2,18 +2,15 @@ var url = 'https://api.keen.io/3.0/projects/54b6884e96773d36ffcb1d4a/queries/ext
 
 
 var width = $(window).width(),
-    height = 500,
-	barHeight = 20;
+    height = 200,
+	barHeight = 20,
 	barPadding = 5;
 	
 var zoom = d3.behavior.zoom()
     .scaleExtent([-10, 10])
     .on("zoom", zoomed);
 
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .call(zoom);
+//var container = svg.append("g");
 
 //Create a ToolTip
 	var tooltip = d3.select("body").append("div")   
@@ -21,9 +18,10 @@ var svg = d3.select("body").append("svg")
 	.style("opacity", 0.9)	
 	.classed("hidden", true);	
 
-var color = ["#5C1A6D", "#92FBCD", "#AC0330"];	
+var color_map = ["#326B5F","#70AC2D","#446329","#55B5A4","#70A460","#48BD5C"]	
+var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"]
 	
-var container = svg.append("g");
+
 
 //d3.json(url, function(error, json) {
  // if (error) return console.warn(error);
@@ -33,6 +31,7 @@ var container = svg.append("g");
     .key(function(d) { return d.fingerprint; })
     .entries(keen_data);
 	
+	//Sort by length of the array to have the biggest& most active first.
 	nested_keen.sort(function(a,b){
 	return b.values.length - a.values.length}
 	);
@@ -50,7 +49,7 @@ var container = svg.append("g");
 		
 	});
 	*/
-	//Sort the data by timestamp as the events that are send are async.
+	//Sort the data per user by the timestamp as the events that are send are async.
 	nested_keen.forEach(function (d,i) {
 		nested_keen[i].values.sort(function(a,b){return a.timestamp - b.timestamp});
 		nested_keen[i].values.forEach(function (f,e) {
@@ -64,23 +63,33 @@ var container = svg.append("g");
 		});
 	});
 	
-	draw(nested_keen[1]);
-	
+	draw(nested_keen[15]);
+	draw(nested_keen[60]);
+	draw(nested_keen[90]);
 	
 //});
 
 function draw(keen_data_fingerprint) {
 	
+	var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+    //.call(zoom);
+	
+	var container = svg.append("g");
+	
 	var keen_data = keen_data_fingerprint.values
-//As we have sorted the data by timestamp we don't have to find the min and max =
+	//As we have sorted the data by timestamp we don't have to find the min and max =
 	var x = d3.time.scale()
     .domain([keen_data[0].timestamp,keen_data[keen_data.length-1].next_timestamp])
     // .range([0, width-(keen_data.length*20)]);
     .range([0, width]);
 	
-	keen_data.forEach(function (d,i) {
+	/*keen_data.forEach(function (d,i) {
 		console.log( x(keen_data[i].next_timestamp) - x(keen_data[i].timestamp) );
 	});
+	*/
+	
 	
 	var group = container.selectAll("g")
     .data(keen_data)
@@ -88,10 +97,10 @@ function draw(keen_data_fingerprint) {
 	.attr("class", "chart")	
 	.attr("transform", function(d, i) { return "translate("+10*i+",0)"; })
 	.on("mouseover", function (d) {
-		showTooltip(d, this);
+		//showTooltip(d, this);
 	})
     .on("mouseout", function () {		
-		d3.select("#tooltip").classed("hidden", true);;
+		//d3.select("#tooltip").classed("hidden", true);;
 	});
 	
 	group.append("circle")
@@ -130,20 +139,25 @@ function draw(keen_data_fingerprint) {
 
 function setRectColor(d, context) {
 
-	if (d.action == "loadPage") return color[0];
-	else if  (d.action == "sidebar:contributionMouseEnter") return color[1];
-	else if  (d.action == "sidebar:contributionMouseLeave") return color[1];
-	else if  (d.action == "sidebar:mouseoverFeatureTag") return color[1];
-	else if  (d.action == "sidebar:mouseoverFeatureReferenceTag") return color[1];
-	else if  (d.action == "sidebar:clickReply") return color[1];
-	else if  (d.action == "map:extentchange") return color[1];
-	else if  (d.action == "sidebar:clickback") return color[1];
-	else if  (d.action == "sidebar:clickToggleFilter") return color[1];
-	else if  (d.action == "sidebar:clickLegend") return color[1];
-	else if  (d.action == "marker:click") return color[1];
-	else if  (d.action == "marker:mouseover") return color[1];
-	else if  (d.action == "navigate") return color[1];
-	else return  color[2];
+	//Map Actions
+	if  (d.action == "map:extentchange") return color_map[0];
+	else if  (d.action == "navigate") return color_map[1];
+	
+	else if  (d.action == "marker:click") return color_map[2];
+	else if  (d.action == "marker:mouseover") return color_map[2];
+	
+	//Sidebar Actions
+	else if  (d.action == "sidebar:contributionMouseEnter") return color_map[5];
+	else if  (d.action == "sidebar:contributionMouseLeave") return color_map[5];
+	else if  (d.action == "sidebar:mouseoverFeatureTag") return color_map[5];
+	else if  (d.action == "sidebar:mouseoverFeatureReferenceTag") return color_map[5];
+	else if  (d.action == "sidebar:clickReply") return color_map[5];
+	else if  (d.action == "sidebar:clickback") return color_map[5];
+	else if  (d.action == "sidebar:clickToggleFilter") return color_map[5];
+	else if  (d.action == "sidebar:clickLegend") return color_map[5];
+	
+	else if (d.action == "loadPage") return color_page[0];
+	//else return  color_page[3];
 }
 
 
