@@ -2,8 +2,8 @@ var url = 'https://api.keen.io/3.0/projects/54b6884e96773d36ffcb1d4a/queries/ext
 
 
 var width = $(window).width(),
-    height = 50,
-	barHeight = 20,
+    height = 100,
+	barHeight = 50,
 	barPadding = 5;
 	
 var zoom = d3.behavior.zoom()
@@ -38,34 +38,32 @@ var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"]
 	
 	
 	
-	/*var timestamps =[];
-	keen_data.forEach(function (d,i) {
-		//cleanup this is not needed as the array is sorted later according to the timestamps
-		timestamps.push(d.timestamp);
-		if(i == keen_data.length-1) keen_data[i].next_timestamp = keen_data.timestamp + 100; 
-		else keen_data[i].next_timestamp = keen_data[i+1].timestamp;
-		
-		//keen_data[i].width = keen_data[i].next_timestamp - keen_data[i].timestamp;
-		
-	});
-	*/
 	//Sort the data per user by the timestamp as the events that are send are async.
 	nested_keen.forEach(function (d,i) {
+		//Sorted by Fingerprint access individual values
 		nested_keen[i].values.sort(function(a,b){return a.timestamp - b.timestamp});
-		nested_keen[i].values.forEach(function (f,e) {
+		
+		nested_keen[i].values.forEach(function (individual_value,e) {
 		
 			if(e == nested_keen[i].values.length-1){
 				nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e].timestamp + 100;
 			}
 			else nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e+1].timestamp;
-			nested_keen[i].values[e].time = (nested_keen[i].values[e].next_timestamp - nested_keen[i].values[e].timestamp)
-		
+			nested_keen[i].values[e].time = (nested_keen[i].values[e].next_timestamp - nested_keen[i].values[e].timestamp);
+			nested_keen[i].values[e].time_human = moment.duration(nested_keen[i].values[e].time).asSeconds();
 		});
+		var a = moment(nested_keen[i].values[0].timestamp);
+		var b = moment(nested_keen[i].values[nested_keen[i].values.length-1].timestamp);
+
+		nested_keen[i].timespent_total = b.diff(a,"days",true);
+		console.log(nested_keen[i].timespent_total);
+		//nested_keen[i].timespent_total_human = nested_keen[i].timespent_total.humanize();
+
 	});
 
 
 prepare_divs(nested_keen);
-
+//draw(nested_keen[16])
 
 function prepare_divs(nested_keen) {
 	var divs = d3.select("body")
@@ -74,16 +72,10 @@ function prepare_divs(nested_keen) {
 		//console.log(d);
 		return d;})
 	.data(nested_keen)
-	
 	.enter()
 	.append("div")
 	.attr("id", function(d) {
-		console.log(d);
 		return "fingerprint_"+d.key});
-	//.text(function(d) { 
-	//	return "fingerprint_"+d.key});
-	
-	//.append("svg")
 	
 	nested_keen.forEach(function (d,i) {
 		draw(nested_keen[i]);
@@ -113,6 +105,22 @@ function draw(keen_data_fingerprint) {
 	.attr("class", "chart")	
 	.attr("transform", function(d, i) { return "translate("+0*i+",0)"; });
 
+	/*
+	group.append("g")
+    .attr("transform", function(d, i) { return "translate("+ x(d.timestamp) +","+ barHeight +") rotate(45) "; })
+	.append("text")
+    .attr("x", 0)
+    .attr("y", 8)
+    //.attr("dy", ".35em")
+    .text(function(d) { 
+	if (d.action == "loadPage") return d.url;
+	else if  (d.action == "sidebar:contributionMouseEnter") return "Sidebar Mouse Enter: "+d.contribution;
+	else if  (d.action == "sidebar:contributionMouseLeave") return "Sidebar Mouse Leave: "+d.contribution;
+	else if  (d.action == "sidebar:mouseoverFeatureTag") return "Mouse Over Feature Tag :"+d.tag.properties.title;
+	else if  (d.action == "sidebar:clickReply") return "Sidebar Click Reply: "+d.contribution_id; 
+	else return d.action;
+	});
+	*/
 	
 	group.append("g")
 	.attr("transform", function(d, i) { return "translate("+(x(d.timestamp)) +",0)"; })
