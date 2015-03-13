@@ -38,31 +38,78 @@ var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"]
 	
 	
 	
-	//Sort the data per user by the timestamp as the events that are send are async.
+
 	nested_keen.forEach(function (d,i) {
-		//Sorted by Fingerprint access individual values
+		//Sort the data per user by the timestamp as the events that are send are async.
 		nested_keen[i].values.sort(function(a,b){return a.timestamp - b.timestamp});
-		
+
+		var one_session = [];
+		var all_session = [];
+
+		//Sorted by fingerprint access individual user values		
 		nested_keen[i].values.forEach(function (individual_value,e) {
-		
+			
+
 			if(e == nested_keen[i].values.length-1){
 				nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e].timestamp + 100;
 			}
 			else nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e+1].timestamp;
 			nested_keen[i].values[e].time = (nested_keen[i].values[e].next_timestamp - nested_keen[i].values[e].timestamp);
-			nested_keen[i].values[e].time_human = moment.duration(nested_keen[i].values[e].time).asSeconds();
+			nested_keen[i].values[e].time_human = moment.duration(nested_keen[i].values[e].time);
+				
+			if(nested_keen[i].values[e].time > 3600000){
+				nested_keen[i].values[e].time_threshold_hit = true;
+				//console.log(nested_keen[i].key+" "+moment.duration(nested_keen[i].values[e].time).humanize());
+			} 
+			else{
+				nested_keen[i].values[e].time_threshold_hit = false;
+			}
+			if(nested_keen[i].values[e].time_threshold_hit)
+			{
+				all_session.push(one_session);
+				one_session = [];
+			}
+			else one_session.push(nested_keen[i].values[e]);
+
 		});
 		var a = moment(nested_keen[i].values[0].timestamp);
 		var b = moment(nested_keen[i].values[nested_keen[i].values.length-1].timestamp);
 
-		nested_keen[i].timespent_total = b.diff(a,"days",true);
-		console.log(nested_keen[i].timespent_total);
+		nested_keen[i].timespent_total = b.diff(a);
+		nested_keen[i].all_session = all_session;
+		//console.log(nested_keen[i].timespent_total);
 		//nested_keen[i].timespent_total_human = nested_keen[i].timespent_total.humanize();
 
 	});
 
 
-prepare_divs(nested_keen);
+var non_idle_users = nested_keen.filter(function (d) {
+	return d.values.length > 3
+});
+console.log("Non-Idle Users: "+ non_idle_users.length);
+
+
+
+var removed_trolls = non_idle_users.filter(function (d) {
+	return d.timespent_total > 10000
+});
+console.log("Users looking at homepage more than 10 sec: "+ removed_trolls.length);
+
+
+var users_with_one_session = removed_trolls.filter(function (d) {
+	return d.all_session.length<2
+});
+console.log("Users with one Session: "+ users_with_one_session.length);
+
+var users_with_multiple_sessions = removed_trolls.filter(function (d) {
+	return d.all_session.length>1
+});
+console.log("Users with one Session: "+ users_with_multiple_sessions.length);
+console.log("Removed number of users: "+ removed_trolls.length)
+console.log("Total Amount of users: "+ nested_keen.length)
+
+
+prepare_divs(users_with_one_session);
 //draw(nested_keen[16])
 
 function prepare_divs(nested_keen) {
@@ -103,7 +150,7 @@ function draw(keen_data_fingerprint) {
     .data(keen_data)
     .enter().append("g")
 	.attr("class", "chart")	
-	.attr("transform", function(d, i) { return "translate("+0*i+",0)"; });
+	.attr("transform", function(d, i) { return "translate("+1*i+",0)"; });
 
 	/*
 	group.append("g")
