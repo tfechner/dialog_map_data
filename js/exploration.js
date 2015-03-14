@@ -1,11 +1,13 @@
 var url = 'https://api.keen.io/3.0/projects/54b6884e96773d36ffcb1d4a/queries/extraction?api_key=95f7c9d5d7af1a8dfc4d5bf22e9e21627ecb74716bd41b7033a5cfe779cc56b6f1d3e761230cd06474a6d837c3c565d3c43dcc1886bde939e6ef53aa78611d4d54aa25fa6c0bec1b645b353912235c076eebb03730719195c7b6e22f3f94bd450813848ae2648ca4267314d2a5e84603&event_collection=tracking'
 
+//ToDo: INclude: https://github.com/jsmreese/moment-duration-format
 
 var width = $(window).width()-100,
-    height = 200,
+    height = 300,
 	barHeight = 50,
 	barPadding = 5;
-	
+
+var session_timer = 300000;	// 60 Minuten
 
 //Create a ToolTip
 	var tooltip = d3.select("body").append("div")   
@@ -43,68 +45,87 @@ var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"]
 
 		//Sorted by fingerprint access individual user values		
 		nested_keen[i].values.forEach(function (individual_value,e) {
-			
 
 			if(e == nested_keen[i].values.length-1){
-				nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e].timestamp + 100;
+				nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e].timestamp + 1000; // + 1000 to get an idea of the last action - it is not shown if it has no duration;
 			}
-			else nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e+1].timestamp;
-			nested_keen[i].values[e].time = (nested_keen[i].values[e].next_timestamp - nested_keen[i].values[e].timestamp);
-			nested_keen[i].values[e].time_human = moment.duration(nested_keen[i].values[e].time);
+			else{
+				nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e+1].timestamp;	
+			} 
+			var action_timestamp = moment(nested_keen[i].values[e].timestamp)
+			var action_next_timestamp = moment(nested_keen[i].values[e].next_timestamp)
+			var action_duration = moment.duration(action_next_timestamp.diff(action_timestamp));
+
+
+			nested_keen[i].values[e].time = action_duration.valueOf();
+			nested_keen[i].values[e].time_human = action_duration;
 				
-			if(nested_keen[i].values[e].time > 3600000){
+			if(nested_keen[i].values[e].time > session_timer){
 				nested_keen[i].values[e].time_threshold_hit = true;
-				//console.log(nested_keen[i].key+" "+moment.duration(nested_keen[i].values[e].time).humanize());
+				//console.log(nested_keen[i].key+" "+nested_keen[i].values[e].time_human);
 			} 
 			else{
 				nested_keen[i].values[e].time_threshold_hit = false;
 			}
+
+
 			if(nested_keen[i].values[e].time_threshold_hit)
 			{
+				//Modify the "next_timestamp" element as we use it to draw the boxes to something sensible.
+				//Add the element to the session where the time threshold was hit e.g. pls one second 1000
+				nested_keen[i].values[e].next_timestamp = nested_keen[i].values[e].timestamp + 1000;
+				one_session.push(nested_keen[i].values[e]);
+				//push sessions to all sessions
 				all_session.push(one_session);
+				//clear for addtional sessions
 				one_session = [];
 			}
 			else one_session.push(nested_keen[i].values[e]);
 
 		});
+
+
 		var a = moment(nested_keen[i].values[0].timestamp);
 		var b = moment(nested_keen[i].values[nested_keen[i].values.length-1].timestamp);
 
-		nested_keen[i].timespent_total = b.diff(a);
+		nested_keen[i].timespent_total = moment.duration(b.diff(a));
+
+		//push the last session to all sessions.
+		all_session.push(one_session);
+		//persist it
 		nested_keen[i].all_session = all_session;
 		//console.log(nested_keen[i].timespent_total);
-		//nested_keen[i].timespent_total_human = nested_keen[i].timespent_total.humanize();
+		nested_keen[i].timespent_total_human = nested_keen[i].timespent_total.humanize();
 
 	});
 
-
+/*
 var non_idle_users = nested_keen.filter(function (d) {
-	return d.values.length > 3
+	return d.values.length > 2
 });
 console.log("Non-Idle Users: "+ non_idle_users.length);
 
-
-
 var removed_trolls = non_idle_users.filter(function (d) {
-	return d.timespent_total > 10000
+	return d.timespent_total > 0
 });
 console.log("Users looking at homepage more than 10 sec: "+ removed_trolls.length);
+*/
 
-
-var users_with_one_session = removed_trolls.filter(function (d) {
-	return d.all_session.length<2
+var users_with_one_session = nested_keen.filter(function (d) {
+	return d.all_session.length < 2
 });
 console.log("Users with one Session: "+ users_with_one_session.length);
 
-var users_with_multiple_sessions = removed_trolls.filter(function (d) {
+var users_with_multiple_sessions = nested_keen.filter(function (d) {
 	return d.all_session.length>1
 });
-console.log("Users with one Session: "+ users_with_multiple_sessions.length);
-console.log("Removed number of users: "+ removed_trolls.length)
+console.log("Users with multiple Sessions: "+ users_with_multiple_sessions.length);
 console.log("Total Amount of users: "+ nested_keen.length)
 
 
 prepare_divs(users_with_one_session);
+console.log("Shown # of Users with one session: "+ users_with_one_session.length)
+
 //draw(nested_keen[16])
 
 function prepare_divs(nested_keen) {
@@ -140,8 +161,8 @@ function draw(keen_data_fingerprint) {
 	.append("svg")
 	.attr("width", width)
     .attr("height", height)
-	.call(zoom);
-	
+	.call(zoom)
+
 	var g = container.append("g");
 
 	var keen_data = keen_data_fingerprint.values
@@ -149,7 +170,15 @@ function draw(keen_data_fingerprint) {
 	var x = d3.time.scale()
     .domain([keen_data[0].timestamp,keen_data[keen_data.length-1].next_timestamp])
     .range([0, width]);
-		
+	
+    g.append("text")
+    .attr("x",0)
+    .attr("y",barHeight*2)
+    //.attr("dy", ".35em")
+    .text("Fingerprint:"+ keen_data_fingerprint.key 
+    	+" Number of actions "+ keen_data_fingerprint.values.length
+    	+" Session Time: "+keen_data_fingerprint.timespent_total_human);
+
 	var group = g.selectAll("g")
     .data(keen_data)
     .enter()
@@ -184,7 +213,7 @@ function draw(keen_data_fingerprint) {
             return setRectColor(d,this);
     });
 
-    g.transition().call(zoom.scale(width/container.node().getBBox().width).event);
+    //g.transition().call(zoom.scale(width/container.node().getBBox().width).event);
 
 }
 
@@ -283,7 +312,7 @@ function draw_old(keen_data_fingerprint, div_id) {
     .data(keen_data)
     .enter().append("g")
 	.attr("class", "chart")	
-	.attr("transform", function(d, i) { return "translate("+3*i+",0)"; })
+	.attr("transform", function(d, i) { return "translate("+0*i+",0)"; })
 	.on("mouseover", function (d) {
 		//showTooltip(d, this);
 	})

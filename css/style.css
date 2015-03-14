@@ -25,8 +25,8 @@
 
 #tooltip {
     font-family: sans-serif;
-    position: top;
-    width: auto;
+    //position: top;
+    //width: auto;
     height: 200;
     padding: 10px;
     line-height: 1;
