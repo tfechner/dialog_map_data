@@ -1,16 +1,11 @@
 var url = 'https://api.keen.io/3.0/projects/54b6884e96773d36ffcb1d4a/queries/extraction?api_key=95f7c9d5d7af1a8dfc4d5bf22e9e21627ecb74716bd41b7033a5cfe779cc56b6f1d3e761230cd06474a6d837c3c565d3c43dcc1886bde939e6ef53aa78611d4d54aa25fa6c0bec1b645b353912235c076eebb03730719195c7b6e22f3f94bd450813848ae2648ca4267314d2a5e84603&event_collection=tracking'
 
 
-var width = $(window).width(),
-    height = 100,
+var width = $(window).width()-100,
+    height = 200,
 	barHeight = 50,
 	barPadding = 5;
 	
-var zoom = d3.behavior.zoom()
-    .scaleExtent([-10, 10])
-    .on("zoom", zoomed);
-
-//var container = svg.append("g");
 
 //Create a ToolTip
 	var tooltip = d3.select("body").append("div")   
@@ -122,7 +117,8 @@ function prepare_divs(nested_keen) {
 	.enter()
 	.append("div")
 	.attr("id", function(d) {
-		return "fingerprint_"+d.key});
+		return "fingerprint_"+d.key
+	})
 	
 	nested_keen.forEach(function (d,i) {
 		draw(nested_keen[i]);
@@ -131,26 +127,35 @@ function prepare_divs(nested_keen) {
 
 function draw(keen_data_fingerprint) {
 	
+	//Not nice but I'm too lazy to change this
+	var zoom = d3.behavior.zoom()
+    .scaleExtent([-10, 10])
+    .on("zoom", zoomed);
+
+	function zoomed(key) {
+	  g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+	}
+
 	var container = d3.select("#fingerprint_"+keen_data_fingerprint.key)
 	.append("svg")
 	.attr("width", width)
     .attr("height", height)
-	.append("g");
+	.call(zoom);
+	
+	var g = container.append("g");
 
 	var keen_data = keen_data_fingerprint.values
 
 	var x = d3.time.scale()
     .domain([keen_data[0].timestamp,keen_data[keen_data.length-1].next_timestamp])
     .range([0, width]);
-	
-
-	
-	
-	var group = container.selectAll("g")
+		
+	var group = g.selectAll("g")
     .data(keen_data)
-    .enter().append("g")
+    .enter()
+    .append("g")
 	.attr("class", "chart")	
-	.attr("transform", function(d, i) { return "translate("+1*i+",0)"; });
+	.attr("transform", function(d, i) { return "translate("+0*i+",0)"; });
 
 	/*
 	group.append("g")
@@ -168,6 +173,7 @@ function draw(keen_data_fingerprint) {
 	else return d.action;
 	});
 	*/
+
 	
 	group.append("g")
 	.attr("transform", function(d, i) { return "translate("+(x(d.timestamp)) +",0)"; })
@@ -177,7 +183,8 @@ function draw(keen_data_fingerprint) {
 	.attr("fill", function(d) {
             return setRectColor(d,this);
     });
-    container.transition().call(zoom.scale($(window).width()/container.node().getBBox().width).event);
+
+    g.transition().call(zoom.scale(width/container.node().getBBox().width).event);
 
 }
 
@@ -206,9 +213,7 @@ function setRectColor(d, context) {
 }
 
 
-function zoomed() {
-  //container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-}
+
 
 
 function showTooltip(d, context) {
