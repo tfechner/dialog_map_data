@@ -2,9 +2,20 @@ var url = 'https://api.keen.io/3.0/projects/54b6884e96773d36ffcb1d4a/queries/ext
 
 //ToDo: INclude: https://github.com/jsmreese/moment-duration-format
 
+
+var color_map = ["#326B5F","#70AC2D","#446329","#55B5A4","#70A460","#48BD5C"];
+var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"];
+
+//Hellgrün
+var map_extend_color =["#BAD8C0"];
+//Rotweinfarben	
+var mosaiv_view_jump =["#AF2867"];
+//Gelb
+var header_map = ["#C5E641"]
+
 var width = $(window).width()-100,
-    height = 300,
-	barHeight = 50,
+    height = 100,
+	barHeight = 30,
 	barPadding = 5;
 
 var session_timer = 300000;	// 60 Minuten
@@ -14,10 +25,6 @@ var session_timer = 300000;	// 60 Minuten
     .attr("id", "tooltip")
 	.style("opacity", 0.9)	
 	.classed("hidden", true);	
-
-var color_map = ["#326B5F","#70AC2D","#446329","#55B5A4","#70A460","#48BD5C"]	
-var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"]
-	
 
 
 //d3.json(url, function(error, json) {
@@ -95,28 +102,41 @@ var color_page =["#784C20","#CB4B23","#CD9433","#CC7E4F"]
 		//persist it
 		nested_keen[i].all_session = all_session;
 		//console.log(nested_keen[i].timespent_total);
-		nested_keen[i].timespent_total_human = nested_keen[i].timespent_total.humanize();
+		nested_keen[i].timespent_total_human = days_hours_minutes(nested_keen[i].timespent_total);
 
 	});
 
-/*
-var non_idle_users = nested_keen.filter(function (d) {
-	return d.values.length > 2
+
+var users_with_map_use = nested_keen.filter(function (d) {
+	contains_map_use = false;
+
+	d.values.forEach(function (e){
+		if (e.action.match("map:extentchange|map:click|marker:click|marker:mouseover|navigate|sidebar:clickBack|marker:click|sidebar:clickToggleFilter|sidebar:filterCategories|sidebar:typeFilter|sidebar:clickResetFilterQuery|sidebar:clickReply|sidebar:contributionMouseEnter|sidebar:contributionMouseLeave|sidebar:mouseoverFeatureTag|sidebar:mouseoverFeatureReferenceTag|sidebar:clickUserLink|sidebar:clickLegend|sidebar:mouseoverUrlTag|sidebar:clickHelp")) {
+  			contains_map_use = true;
+		}
+	});
+	if(contains_map_use) return d;
+
+});
+console.log("Users with map use: "+ users_with_map_use.length);
+
+/*var non_idle_users = users_with_map_use.filter(function (d) {
+	return d.values.length > 5
 });
 console.log("Non-Idle Users: "+ non_idle_users.length);
 
 var removed_trolls = non_idle_users.filter(function (d) {
-	return d.timespent_total > 0
+	return d.timespent_total > 10
 });
 console.log("Users looking at homepage more than 10 sec: "+ removed_trolls.length);
 */
 
-var users_with_one_session = nested_keen.filter(function (d) {
+var users_with_one_session = users_with_map_use.filter(function (d) {
 	return d.all_session.length < 2
 });
 console.log("Users with one Session: "+ users_with_one_session.length);
 
-var users_with_multiple_sessions = nested_keen.filter(function (d) {
+var users_with_multiple_sessions = users_with_map_use.filter(function (d) {
 	return d.all_session.length>1
 });
 console.log("Users with multiple Sessions: "+ users_with_multiple_sessions.length);
@@ -217,28 +237,54 @@ function draw(keen_data_fingerprint) {
 
 }
 
-
+// All actions
 function setRectColor(d, context) {
 
-	//Map Actions
-	if  (d.action == "map:extentchange") return color_map[0];
-	else if  (d.action == "navigate") return color_map[1];
+	//Map Actions 	//Hellgrün
+	if  (d.action == "map:extentchange") return "#BAD8C0";
+	else if  (d.action == "map:click") return "#BAD8C0";
+	else if  (d.action == "marker:click") return "#BAD8C0";
+	else if  (d.action == "marker:mouseover") return "#BAD8C0";
+
+	//Navigate from mosaic-view to map view or to one specific
+	else if  (d.action == "navigate") 
+		{
+			//Wenn es eine Zahl enthält war es eine Aktion aus der mosaic-view
+			//Rotweinfarben
+			if(/[0-9]/.test(d.target))	return "#AF2867";
+			//Ansonsten ein Aufruf aus dem Header helles gelb
+			else return "#AF2867";
+		}
 	
-	else if  (d.action == "marker:click") return color_map[2];
-	else if  (d.action == "marker:mouseover") return color_map[2];
+	//Detailed-View geo-visualization
+	else if  (d.action == "sidebar:clickBack") return "#C87B33";
+	else if  (d.action == "marker:click") return "#C87B33";
+
+	//Filter Actions
+	else if  (d.action == "sidebar:clickToggleFilter") return "#C3CBE1";
+	else if  (d.action == "sidebar:filterCategories") return "#C3CBE1";
+	else if  (d.action == "sidebar:typeFilter") return "#C3CBE1";
+	else if  (d.action == "sidebar:clickResetFilterQuery") return "#C3CBE1";
 	
+	//Dialog Funktion
+	else if  (d.action == "sidebar:clickReply") return "#808080";
+	
+
 	//Sidebar Actions
-	else if  (d.action == "sidebar:contributionMouseEnter") return color_map[5];
-	else if  (d.action == "sidebar:contributionMouseLeave") return color_map[5];
-	else if  (d.action == "sidebar:mouseoverFeatureTag") return color_map[5];
-	else if  (d.action == "sidebar:mouseoverFeatureReferenceTag") return color_map[5];
-	else if  (d.action == "sidebar:clickReply") return color_map[5];
-	else if  (d.action == "sidebar:clickback") return color_map[5];
-	else if  (d.action == "sidebar:clickToggleFilter") return color_map[5];
-	else if  (d.action == "sidebar:clickLegend") return color_map[5];
+	else if  (d.action == "sidebar:contributionMouseEnter") return "#C3CBE1";
+	else if  (d.action == "sidebar:contributionMouseLeave") return "#C3CBE1";
+	else if  (d.action == "sidebar:mouseoverFeatureTag") return "#C3CBE1";
+	else if  (d.action == "sidebar:mouseoverFeatureReferenceTag") return "#C3CBE1";
+	else if  (d.action == "sidebar:clickUserLink") return "#C3CBE1";
+	else if  (d.action == "sidebar:clickLegend") return "#C3CBE1";
+	else if  (d.action == "sidebar:mouseoverUrlTag") return "#C3CBE1"; 
+	else if  (d.action == "sidebar:clickHelp") return "#C3CBE1"; 
 	
-	else if (d.action == "loadPage") return color_page[0];
-	//else return  color_page[3];
+	else if (d.action == "loadPage") return "#B657AD";
+	else {
+		console.log(d);
+		return  "#000000";
+	}
 }
 
 
@@ -281,6 +327,17 @@ function replacer(key,value)
 	else if (key=="marker-color") return undefined;
 	else if (key=="id") return undefined;
 	else return value;
+}
+
+function days_hours_minutes(ms){
+    days = Math.floor(ms / (24*60*60*1000));
+    daysms=ms % (24*60*60*1000);
+    hours = Math.floor((daysms)/(60*60*1000));
+    hoursms=ms % (60*60*1000);
+    minutes = Math.floor((hoursms)/(60*1000));
+    minutesms=ms % (60*1000);
+    sec = Math.floor((minutesms)/(1000));
+    return days+":"+hours+":"+minutes+":"+sec;
 }
 
 function draw_old(keen_data_fingerprint, div_id) {
